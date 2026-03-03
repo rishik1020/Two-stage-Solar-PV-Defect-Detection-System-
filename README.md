@@ -105,3 +105,8 @@ NumPy
 Matplotlib
 
 CUDA (GPU acceleration)
+
+
+Rishik Reddy Pakanati and TEAM
+B.Tech – Artificial Intelligence & Machine Learning
+Woxsen University
