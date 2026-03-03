@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SolarWatch – Panel Monitoring System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+:root{
+  --bg:#061a14;--surface:#0b2318;--card:#0f2e20;--border:#1a4a30;
+  --accent:#2dd4bf;--accent2:#34d399;--accent3:#059669;
+  --danger:#ef4444;--warn:#f59e0b;--text:#d1fae5;--muted:#4d7a62;--radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── LOGIN ── */
+#loginPage{display:flex;align-items:center;justify-content:center;min-height:100vh;
+  background:radial-gradient(ellipse at 60% 30%,#0a3d2b 0%,#061a14 70%)}
+.login-box{background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:48px 40px;width:100%;max-width:440px;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo .sun{width:64px;height:64px;background:linear-gradient(135deg,#2dd4bf,#059669);
+  border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  font-size:32px;margin-bottom:12px;box-shadow:0 0 32px rgba(45,212,191,.4)}
+.login-logo h1{font-size:24px;font-weight:800}
+.login-logo p{font-size:13px;color:var(--muted);margin-top:4px}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-bottom:7px}
+.form-group input{width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:12px 16px;color:var(--text);font-size:15px;font-family:inherit;
+  outline:none;transition:border-color .2s}
+.form-group input:focus{border-color:var(--accent)}
+.login-btn{width:100%;background:linear-gradient(135deg,#2dd4bf,#059669);border:none;
+  border-radius:10px;padding:14px;color:#000;font-size:15px;font-weight:700;
+  font-family:inherit;cursor:pointer;transition:opacity .2s,transform .1s;margin-top:6px}
+.login-btn:hover{opacity:.9;transform:translateY(-1px)}
+.login-hint{font-size:11px;color:var(--muted);margin-top:20px}
+.login-hint table{width:100%;border-collapse:collapse;margin-top:8px}
+.login-hint td{padding:4px 8px;border:1px solid var(--border);font-size:11px}
+.login-hint td:first-child{color:var(--accent2);font-weight:600}
+.login-hint .admin-row td{color:var(--warn)}
+.login-error{color:var(--danger);font-size:13px;text-align:center;margin-top:10px;display:none}
+
+/* ── TOPBAR ── */
+#dashboard{display:none}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;
+  height:62px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:200}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-logo{font-size:19px;font-weight:800;color:#2dd4bf;letter-spacing:-.5px}
+.topbar-logo span{color:var(--text)}
+.role-pill{border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;letter-spacing:.3px}
+.role-pill.admin{background:rgba(245,158,11,.18);color:var(--warn);border:1px solid rgba(245,158,11,.3)}
+.role-pill.user{background:rgba(45,212,191,.13);color:var(--accent);border:1px solid rgba(45,212,191,.25)}
+.status-pill{background:rgba(52,211,153,.13);color:var(--accent2);
+  border:1px solid rgba(52,211,153,.28);border-radius:20px;padding:3px 11px;font-size:11px;font-weight:600}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.user-badge{display:flex;align-items:center;gap:7px;background:var(--card);
+  border:1px solid var(--border);border-radius:9px;padding:5px 12px;font-size:13px}
+.logout-btn{background:rgba(239,68,68,.1);color:var(--danger);
+  border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:5px 13px;
+  font-size:13px;font-family:inherit;cursor:pointer;transition:background .2s}
+.logout-btn:hover{background:rgba(239,68,68,.2)}
+.main{padding:24px;max-width:1500px;margin:0 auto}
+
+/* ── SECTION HEADER ── */
+.section-hdr{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
+  color:var(--muted);margin:0 0 14px;display:flex;align-items:center;gap:8px}
+.section-hdr span{color:var(--accent)}
+
+/* ── KPI ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px;margin-bottom:24px}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-card.c-green::before{background:var(--accent2)}
+.kpi-card.c-teal::before{background:var(--accent)}
+.kpi-card.c-dk::before{background:var(--accent3)}
+.kpi-card.c-red::before{background:var(--danger)}
+.kpi-card.c-orange::before{background:var(--warn)}
+.kpi-icon{font-size:26px;margin-bottom:8px}
+.kpi-label{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.kpi-value{font-size:26px;font-weight:800;margin:3px 0}
+.kpi-sub{font-size:11px;color:var(--muted)}
+.kpi-card.c-green .kpi-value{color:var(--accent2)}
+.kpi-card.c-teal .kpi-value{color:var(--accent)}
+.kpi-card.c-dk .kpi-value{color:var(--accent3)}
+.kpi-card.c-red .kpi-value{color:var(--danger)}
+.kpi-card.c-orange .kpi-value{color:var(--warn)}
+
+/* ── CHARTS ── */
+.charts-row{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:24px}
+.charts-row-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px}
+@media(max-width:900px){.charts-row,.charts-row-2{grid-template-columns:1fr}}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.chart-title{font-size:14px;font-weight:700;margin-bottom:14px}
+canvas{max-height:240px}
+
+/* ── TABLE ── */
+.bottom-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px}
+@media(max-width:900px){.bottom-row{grid-template-columns:1fr}}
+.panel-table{width:100%;border-collapse:collapse}
+.panel-table th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);
+  font-weight:600;padding:9px 12px;border-bottom:1px solid var(--border);text-align:left}
+.panel-table td{padding:9px 12px;font-size:12px;border-bottom:1px solid rgba(26,74,48,.4)}
+.panel-table tr:last-child td{border-bottom:none}
+.panel-table tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600}
+.badge.ok{background:rgba(52,211,153,.15);color:var(--accent2)}
+.badge.warn{background:rgba(245,158,11,.15);color:var(--warn)}
+.badge.fault{background:rgba(239,68,68,.15);color:var(--danger)}
+
+/* ── ALERTS ── */
+.alerts-list{display:flex;flex-direction:column;gap:9px;max-height:320px;overflow-y:auto}
+.alert-item{display:flex;align-items:flex-start;gap:10px;background:var(--surface);
+  border-radius:9px;padding:10px 12px;border-left:3px solid;font-size:12px;flex-shrink:0}
+.alert-item.danger{border-color:var(--danger)}
+.alert-item.warning{border-color:var(--warn)}
+.alert-item.info{border-color:var(--accent)}
+.alert-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.alert-item.danger .alert-dot{background:var(--danger)}
+.alert-item.warning .alert-dot{background:var(--warn)}
+.alert-item.info .alert-dot{background:var(--accent)}
+.alert-title{font-weight:600;margin-bottom:2px}
+.alert-time{font-size:11px;color:var(--muted)}
+
+/* ── ADMIN MULTI-VIEW ── */
+.admin-tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.admin-tab{background:var(--card);border:1px solid var(--border);border-radius:9px;
+  padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--muted)}
+.admin-tab:hover{border-color:var(--accent);color:var(--accent)}
+.admin-tab.active{background:rgba(45,212,191,.12);border-color:var(--accent);color:var(--accent)}
+.admin-overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;margin-bottom:24px}
+.user-panel-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.user-panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.user-panel-name{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.zone-badge{background:rgba(45,212,191,.12);color:var(--accent);border:1px solid rgba(45,212,191,.25);
+  border-radius:6px;padding:2px 9px;font-size:11px;font-weight:600}
+.mini-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.mini-stat{background:var(--surface);border-radius:8px;padding:9px;text-align:center}
+.mini-stat-val{font-size:16px;font-weight:800;margin-bottom:2px}
+.mini-stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.mini-stat.ok .mini-stat-val{color:var(--accent2)}
+.mini-stat.warn .mini-stat-val{color:var(--warn)}
+.mini-stat.bad .mini-stat-val{color:var(--danger)}
+.mini-chart-wrap{height:80px}
+
+/* ── DRONE ── */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:28px;
+  text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.upload-zone:hover,.upload-zone.dragging{border-color:var(--accent);background:rgba(45,212,191,.04)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:36px;margin-bottom:8px}
+.upload-zone h3{font-size:14px;font-weight:600;margin-bottom:5px}
+.upload-zone p{font-size:12px;color:var(--muted)}
+.panel-select-row{display:flex;gap:8px;margin-bottom:14px;align-items:center}
+.panel-select-row label{font-size:13px;color:var(--muted);white-space:nowrap}
+.panel-select-row select{background:var(--surface);border:1px solid var(--border);
+  color:var(--text);border-radius:8px;padding:7px 11px;font-family:inherit;font-size:13px;
+  outline:none;flex:1}
+.analyze-btn{background:linear-gradient(135deg,#2dd4bf,#059669);border:none;border-radius:8px;
+  padding:8px 18px;color:#000;font-weight:700;font-family:inherit;font-size:13px;
+  cursor:pointer;white-space:nowrap;transition:opacity .2s}
+.analyze-btn:hover{opacity:.88}
+.analyze-btn:disabled{opacity:.4;cursor:not-allowed}
+.preview-area{margin-top:14px}
+.preview-img{width:100%;max-height:200px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
+.ai-result{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:14px;margin-top:10px;font-size:13px;line-height:1.75}
+.ai-result .ai-label{font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.5px;color:#2dd4bf;margin-bottom:7px}
+.spinner{display:inline-block;width:16px;height:16px;
+  border:2px solid rgba(45,212,191,.3);border-top-color:#2dd4bf;
+  border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── VIEW-ONLY BANNER ── */
+.view-only-banner{background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.2);
+  border-radius:10px;padding:10px 16px;font-size:12px;color:var(--accent);
+  margin-bottom:20px;display:flex;align-items:center;gap:8px}
+
+/* scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- ════════ LOGIN ════════ -->
+<div id="loginPage">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="sun">☀️</div>
+      <h1>Solar<span style="color:var(--accent)">Watch</span></h1>
+      <p>Solar Panel Monitoring System</p>
+    </div>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="username" placeholder="Enter username"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="Enter password"
+        onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <button class="login-btn" onclick="doLogin()">Sign In →</button>
+    <div class="login-hint">
+      <div style="margin-bottom:4px;font-weight:600">Login Credentials:</div>
+      <table>
+        <tr class="admin-row"><td>⭐ adminhari</td><td>admin123</td><td>All zones</td></tr>
+        <tr><td>👤 user1</td><td>pass1</td><td>Amogh Reddy</td></tr>
+        <tr><td>👤 user2</td><td>pass2</td><td>Rohan Reddy</td></tr>
+        <tr><td>👤 user3</td><td>pass3</td><td>Rishik Reddy</td></tr>
+        <tr><td>👤 user4</td><td>pass4</td><td>Ritvik</td></tr>
+        <tr><td>👤 user5</td><td>pass5</td><td>Sreepaad</td></tr>
+      </table>
+    </div>
+    <p class="login-error" id="loginError">❌ Invalid username or password</p>
+  </div>
+</div>
+
+<!-- ════════ DASHBOARD ════════ -->
+<div id="dashboard">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">Solar<span>Watch</span></div>
+      <div class="role-pill" id="rolePill">USER</div>
+      <div class="status-pill">● System Online</div>
+    </div>
+    <div class="topbar-right">
+      <div style="font-size:11px;color:var(--muted)" id="lastUpdated"></div>
+      <div class="user-badge">👤 <span id="loggedUser"></span></div>
+      <button class="logout-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="main" id="mainContent"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+//  CREDENTIALS
+// ══════════════════════════════════════════════════
+const USERS = {
+  adminhari: { pass:'admin123', role:'admin',  zone:null,        name:'AdminHari'      },
+  user1:     { pass:'pass1',    role:'user',   zone:'Alpha',     name:'Amogh Reddy'    },
+  user2:     { pass:'pass2',    role:'user',   zone:'Beta',      name:'Rohan Reddy'    },
+  user3:     { pass:'pass3',    role:'user',   zone:'Gamma',     name:'Rishik Reddy'   },
+  user4:     { pass:'pass4',    role:'user',   zone:'Delta',     name:'Ritvik'         },
+  user5:     { pass:'pass5',    role:'user',   zone:'Epsilon',   name:'Sreepaad'       },
+};
+
+const ZONE_COLORS = {
+  Alpha:'#2dd4bf', Beta:'#34d399', Gamma:'#f59e0b', Delta:'#a78bfa', Epsilon:'#f87171'
+};
+// ══════════════════════════════════════════════════
+//  CSV DATA LOADER
+// ══════════════════════════════════════════════════
+async function loadCSVData(){
+  const response = await fetch('solar_data.csv');
+  const text = await response.text();
+  const rows = text.trim().split('\n').slice(1);
+
+  const data = rows.map(r=>{
+    const c = r.split(',');
+    return {
+      zone: c[1],
+      panel: c[2],
+      power: parseFloat(c[3]),
+      irradiance: parseFloat(c[4]),
+      temp: parseFloat(c[5]),
+      status: c[6]
+    };
+  });
+
+  return data;
+}
+function processCSVData(data){
+  const zones = {};
+
+  data.forEach(row=>{
+    if(!zones[row.zone]){
+      zones[row.zone] = generateZoneData(row.zone);
+      zones[row.zone].panels = [];
+      zones[row.zone].peakPower = 0;
+      zones[row.zone].operational = 0;
+      zones[row.zone].degraded = 0;
+      zones[row.zone].faultCount = 0;
+      zones[row.zone].TOTAL = 0;
+      zones[row.zone].energyToday = 0;
+      zones[row.zone].avgTemp = 0;
+    }
+
+    const z = zones[row.zone];
+
+    z.panels.push({
+      id: row.panel,
+      power: row.power,
+      temp: row.temp,
+      status: "ok"   // initially mark all operational
+    });
+
+    z.TOTAL++;
+    z.peakPower += row.power;
+    z.energyToday += row.power/1000;
+    z.avgTemp += row.temp;
+  });
+
+  // Add few demo faults per zone
+  Object.values(zones).forEach(z=>{
+
+    const shuffled = [...z.panels].sort(()=>0.5 - Math.random());
+
+    const faultNum = Math.floor(Math.random()*3)+2;     // 2–4 faults
+    const degradedNum = Math.floor(Math.random()*2)+1;  // 1–2 degraded
+
+    shuffled.slice(0,faultNum).forEach(p=>{
+      p.status = "fault";
+      z.faultCount++;
+    });
+
+    shuffled.slice(faultNum,faultNum+degradedNum).forEach(p=>{
+      p.status = "warn";
+      z.degraded++;
+    });
+
+    z.operational = z.TOTAL - z.faultCount - z.degraded;
+
+    z.avgTemp = (z.avgTemp/z.TOTAL).toFixed(1);
+    z.avail = ((z.operational/z.TOTAL)*100).toFixed(1);
+  });
+
+  return zones;
+}
+// ══════════════════════════════════════════════════
+//  SYNTHETIC DATA GENERATOR (per zone)
+// ══════════════════════════════════════════════════
+function rand(min,max,dec){ const v=Math.random()*(max-min)+min; return dec?parseFloat(v.toFixed(dec)):Math.round(v) }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)] }
+
+const FAULT_REASONS = ['Physical damage','Debris/shading','Moisture ingress','Diode failure','Connector corrosion'];
+const WARN_REASONS  = ['Low capacity output','Soiling detected','Partial shading','Micro-crack detected'];
+const TIME_SLOTS    = ['08:12','08:47','09:15','09:33','10:05','10:32','11:04','11:22'];
+
+function generateZoneData(zoneName){
+  const TOTAL = rand(20,30);
+  const faultCount = rand(1,4);
+  const degraded = rand(1,3);
+  const operational = TOTAL - faultCount - degraded;
+  const avail = parseFloat((operational/TOTAL*100).toFixed(1));
+  const peakPower = rand(80,160);
+  const irr = rand(620,980);
+  const energyToday = rand(8,20)/10;
+  const energyTarget = parseFloat((energyToday*(1+rand(5,28)/100)).toFixed(2));
+  const avgTemp = rand(46,63);
+  const overheat = rand(1,3);
+  const delta = rand(-10,18);
+
+  const power24 = Array.from({length:24},(_,i)=>{
+    if(i<5||i>20) return 0;
+    const t=(i-5)/15;
+    const bell=Math.sin(Math.PI*t);
+    return Math.max(0,Math.round(bell*peakPower+rand(-8,8)));
+  });
+
+  const weeklyEnergy = Array.from({length:7},()=>rand(6,18)/10);
+
+  const raw=[rand(1,3),rand(2,5),rand(5,10),rand(8,14),rand(3,7),rand(1,4),faultCount];
+  const rawSum=raw.reduce((a,b)=>a+b,0);
+  const tempBuckets=raw.map(v=>Math.max(1,Math.round(v*TOTAL/rawSum)));
+
+  const used=new Set();
+  const makeId=()=>{let n;do{n=rand(1,TOTAL*2)}while(used.has(n));used.add(n);return`${zoneName[0]}-${String(n).padStart(3,'0')}`};
+  const panels=[];
+  for(let i=0;i<faultCount;i++) panels.push({id:makeId(),power:0,temp:rand(69,83),status:'fault'});
+  for(let i=0;i<degraded;i++) panels.push({id:makeId(),power:rand(10,26)/10,temp:rand(61,69),status:'warn'});
+  const okNeeded=Math.max(0,8-faultCount-degraded);
+  for(let i=0;i<okNeeded;i++) panels.push({id:makeId(),power:rand(38,47)/10,temp:rand(46,58),status:'ok'});
+  panels.sort((a,b)=>a.id.localeCompare(b.id));
+
+  const alerts=[];
+  panels.filter(p=>p.status==='fault').forEach((p,i)=>
+    alerts.push({type:'danger',title:`Panel ${p.id} – Complete Failure`,time:`Today ${TIME_SLOTS[i%TIME_SLOTS.length]} · ${pick(FAULT_REASONS)}`}));
+  panels.filter(p=>p.status==='warn').forEach((p,i)=>
+    alerts.push({type:'warning',title:`Panel ${p.id} – Degraded`,time:`Today ${TIME_SLOTS[(i+2)%TIME_SLOTS.length]} · ${pick(WARN_REASONS)}`}));
+
+  return{zoneName,TOTAL,faultCount,degraded,operational,avail,peakPower,irr,
+    energyToday,energyTarget,avgTemp,overheat,delta,power24,weeklyEnergy,tempBuckets,panels,alerts};
+}
+
+// Generate all 5 zones upfront
+let ALL_ZONES = {};
+const ZONE_NAMES = ['Alpha','Beta','Gamma','Delta','Epsilon'];
+const USER_NAMES = {Alpha:'Amogh Reddy',Beta:'Rohan Reddy',Gamma:'Rishik Reddy',Delta:'Ritvik',Epsilon:'Sreepaad'};
+
+// ══════════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════════
+let currentUser = null;
+let chartInstances = [];
+
+function doLogin(){
+  const u=document.getElementById('username').value.trim();
+  const p=document.getElementById('password').value.trim();
+  const rec=USERS[u];
+  if(rec&&rec.pass===p){
+    currentUser={username:u,...rec};
+    // Regenerate all zone data fresh on every login
+    loadCSVData().then(data=>{
+  ALL_ZONES = processCSVData(data);
+
+  document.getElementById('loginPage').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  document.getElementById('loggedUser').textContent=rec.name;
+  document.getElementById('lastUpdated').textContent='Updated: '+new Date().toLocaleTimeString();
+
+  const pill=document.getElementById('rolePill');
+  if(rec.role==='admin'){
+      pill.textContent='⭐ ADMIN';
+      pill.className='role-pill admin';
+      renderAdmin();
+  } else {
+      pill.textContent='👁 VIEW ONLY';
+      pill.className='role-pill user';
+      renderUser(rec.zone);
+  }
+});
+
+    document.getElementById('loginPage').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    document.getElementById('loggedUser').textContent=rec.name;
+    document.getElementById('lastUpdated').textContent='Updated: '+new Date().toLocaleTimeString();
+    const pill=document.getElementById('rolePill');
+    if(rec.role==='admin'){pill.textContent='⭐ ADMIN';pill.className='role-pill admin';}
+    else{pill.textContent='👁 VIEW ONLY';pill.className='role-pill user';}
+
+    if(rec.role==='admin') renderAdmin();
+    else renderUser(rec.zone);
+  } else {
+    document.getElementById('loginError').style.display='block';
+  }
+}
+
+function doLogout(){
+  chartInstances.forEach(c=>c.destroy());
+  chartInstances=[];
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('loginPage').style.display='flex';
+  document.getElementById('username').value='';
+  document.getElementById('password').value='';
+  document.getElementById('loginError').style.display='none';
+  document.getElementById('mainContent').innerHTML='';
+  currentUser=null;
+  uploadedFile=null;
+}
+
+// ══════════════════════════════════════════════════
+//  USER VIEW (single zone, view-only)
+// ══════════════════════════════════════════════════
+function renderUser(zoneName){
+  const ds=ALL_ZONES[zoneName];
+  const col=ZONE_COLORS[zoneName]||'#2dd4bf';
+  const main=document.getElementById('mainContent');
+  main.innerHTML=`
+    <div class="view-only-banner">👁 View-Only Mode — You are viewing <strong>${zoneName}</strong>&#39;s data only</div>
+    <div class="section-hdr">☀️ Zone <span>${zoneName}</span> — Live Dashboard</div>
+    <div class="kpi-grid">
+      <div class="kpi-card c-green"><div class="kpi-icon">⚡</div><div class="kpi-label">Power Output</div><div class="kpi-value">${ds.peakPower} kW</div><div class="kpi-sub">${ds.delta>=0?'↑':'↓'} ${Math.abs(ds.delta)}% vs yesterday</div></div>
+      <div class="kpi-card c-teal"><div class="kpi-icon">☀️</div><div class="kpi-label">Solar Irradiance</div><div class="kpi-value">${ds.irr} W/m²</div><div class="kpi-sub">${ds.irr>800?'Clear sky':ds.irr>600?'Partly cloudy':'Overcast'}</div></div>
+      <div class="kpi-card c-dk"><div class="kpi-icon">🔋</div><div class="kpi-label">Energy Today</div><div class="kpi-value">${ds.energyToday} MWh</div><div class="kpi-sub">Target: ${ds.energyTarget} MWh</div></div>
+      <div class="kpi-card c-green"><div class="kpi-icon">✅</div><div class="kpi-label">Panels Operational</div><div class="kpi-value">${ds.operational}/${ds.TOTAL}</div><div class="kpi-sub">${ds.avail}% availability</div></div>
+      <div class="kpi-card c-red"><div class="kpi-icon">⚠️</div><div class="kpi-label">Faulty Panels</div><div class="kpi-value">${ds.faultCount}</div><div class="kpi-sub">Drone required</div></div>
+      <div class="kpi-card c-orange"><div class="kpi-icon">🌡️</div><div class="kpi-label">Avg Temp</div><div class="kpi-value">${ds.avgTemp}°C</div><div class="kpi-sub">${ds.overheat} overheating</div></div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-card"><div class="chart-title">📈 Power Output – 24 Hours (kW)</div><canvas id="uPowerChart"></canvas></div>
+      <div class="chart-card"><div class="chart-title">🟢 Panel Status</div><canvas id="uStatusChart"></canvas></div>
+    </div>
+    <div class="charts-row-2">
+      <div class="chart-card"><div class="chart-title">🔋 Weekly Energy (MWh)</div><canvas id="uEnergyChart"></canvas></div>
+      <div class="chart-card"><div class="chart-title">🌡️ Temperature Distribution</div><canvas id="uTempChart"></canvas></div>
+    </div>
+    <div class="bottom-row">
+      <div class="chart-card">
+        <div class="section-hdr">🗂️ Panel Status Table</div>
+        <table class="panel-table">
+          <thead><tr><th>Panel ID</th><th>Power (kW)</th><th>Temp (°C)</th><th>Status</th></tr></thead>
+          <tbody>${ds.panels.map(p=>`<tr><td>${p.id}</td><td>${p.power.toFixed(1)}</td><td>${p.temp}</td><td><span class="badge ${p.status}">${p.status==='ok'?'Operational':p.status==='warn'?'Degraded':'Fault'}</span></td></tr>`).join('')}</tbody>
+        </table>
+      </div>
+      <div class="chart-card">
+        <div class="section-hdr">🔔 Alerts</div>
+        <div class="alerts-list">${ds.alerts.map(a=>`<div class="alert-item ${a.type}"><div class="alert-dot"></div><div><div class="alert-title">${a.title}</div><div class="alert-time">${a.time}</div></div></div>`).join('')}</div>
+      </div>
+    </div>`;
+
+  const G='#1a4a30';
+  const hours=Array.from({length:24},(_,i)=>`${i}:00`);
+  chartInstances.push(new Chart(document.getElementById('uPowerChart'),{type:'line',
+    data:{labels:hours,datasets:[{label:'kW',data:ds.power24,borderColor:col,backgroundColor:col+'22',fill:true,tension:0.4,pointRadius:0,borderWidth:2.5}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:G},ticks:{maxTicksLimit:8}},y:{grid:{color:G},min:0}}}}));
+
+  chartInstances.push(new Chart(document.getElementById('uStatusChart'),{type:'doughnut',
+    data:{labels:['Operational','Degraded','Fault'],datasets:[{data:[ds.operational,ds.degraded,ds.faultCount],backgroundColor:['#34d399','#f59e0b','#ef4444'],borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{padding:14,font:{size:11},color:'#4d7a62'}}}}}));
+
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  chartInstances.push(new Chart(document.getElementById('uEnergyChart'),{type:'bar',
+    data:{labels:days,datasets:[{label:'MWh',data:ds.weeklyEnergy,backgroundColor:days.map((_,i)=>i===new Date().getDay()-1?col:'#059669'),borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:G},min:0}}}}));
+
+  chartInstances.push(new Chart(document.getElementById('uTempChart'),{type:'bar',
+    data:{labels:['<40','40-45','45-50','50-55','55-60','60-65','>65'],datasets:[{label:'Panels',data:ds.tempBuckets,backgroundColor:['#059669','#059669','#2dd4bf','#2dd4bf','#f59e0b','#ef4444','#ef4444'],borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:G},min:0}}}}));
+}
+
+// ══════════════════════════════════════════════════
+//  ADMIN VIEW
+// ══════════════════════════════════════════════════
+let adminCurrentTab='overview';
+
+function renderAdmin(){
+  const main=document.getElementById('mainContent');
+  main.innerHTML=`
+    <div class="section-hdr">⭐ Admin Dashboard — <span>All 5 Zones</span></div>
+    <div class="admin-tabs">
+      <div class="admin-tab active" onclick="switchAdminTab('overview',this)">🗺️ All Zones Overview</div>
+      <div class="admin-tab" onclick="switchAdminTab('Alpha',this)">Amogh Reddy</div>
+      <div class="admin-tab" onclick="switchAdminTab('Beta',this)">Rohan Reddy</div>
+      <div class="admin-tab" onclick="switchAdminTab('Gamma',this)">Rishik Reddy</div>
+      <div class="admin-tab" onclick="switchAdminTab('Delta',this)">Ritvik</div>
+      <div class="admin-tab" onclick="switchAdminTab('Epsilon',this)">Sreepaad</div>
+      <div class="admin-tab" onclick="switchAdminTab('drone',this)">🚁 Drone Upload</div>
+    </div>
+    <div id="adminTabContent"></div>`;
+  renderAdminOverview();
+}
+
+function switchAdminTab(tab, el){
+  document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  adminCurrentTab=tab;
+  chartInstances.forEach(c=>c.destroy());
+  chartInstances=[];
+  if(tab==='overview') renderAdminOverview();
+  else if(tab==='drone') renderDroneSection();
+  else renderAdminZone(tab);
+}
+
+function renderAdminOverview(){
+  // Summary KPIs across all zones
+  const totPanels=ZONE_NAMES.reduce((s,z)=>s+ALL_ZONES[z].TOTAL,0);
+  const totOp=ZONE_NAMES.reduce((s,z)=>s+ALL_ZONES[z].operational,0);
+  const totFault=ZONE_NAMES.reduce((s,z)=>s+ALL_ZONES[z].faultCount,0);
+  const totDeg=ZONE_NAMES.reduce((s,z)=>s+ALL_ZONES[z].degraded,0);
+  const totPower=ZONE_NAMES.reduce((s,z)=>s+ALL_ZONES[z].peakPower,0);
+  const totEnergy=parseFloat(ZONE_NAMES.reduce((s,z)=>s+ALL_ZONES[z].energyToday,0).toFixed(2));
+  const avgTemp=Math.round(ZONE_NAMES.reduce((s,z)=>s+ALL_ZONES[z].avgTemp,0)/5);
+  const avail=parseFloat((totOp/totPanels*100).toFixed(1));
+
+  const content=document.getElementById('adminTabContent');
+  content.innerHTML=`
+    <div class="kpi-grid" style="margin-bottom:20px">
+      <div class="kpi-card c-green"><div class="kpi-icon">⚡</div><div class="kpi-label">Total Power (All Zones)</div><div class="kpi-value">${totPower} kW</div><div class="kpi-sub">Across 5 zones</div></div>
+      <div class="kpi-card c-dk"><div class="kpi-icon">🔋</div><div class="kpi-label">Total Energy Today</div><div class="kpi-value">${totEnergy} MWh</div><div class="kpi-sub">Combined output</div></div>
+      <div class="kpi-card c-green"><div class="kpi-icon">✅</div><div class="kpi-label">Total Operational</div><div class="kpi-value">${totOp}/${totPanels}</div><div class="kpi-sub">${avail}% availability</div></div>
+      <div class="kpi-card c-red"><div class="kpi-icon">⚠️</div><div class="kpi-label">Total Faults</div><div class="kpi-value">${totFault}</div><div class="kpi-sub">${totDeg} degraded</div></div>
+      <div class="kpi-card c-orange"><div class="kpi-icon">🌡️</div><div class="kpi-label">Fleet Avg Temp</div><div class="kpi-value">${avgTemp}°C</div><div class="kpi-sub">All zones combined</div></div>
+      <div class="kpi-card c-teal"><div class="kpi-icon">🗺️</div><div class="kpi-label">Active Zones</div><div class="kpi-value">5 / 5</div><div class="kpi-sub">All zones online</div></div>
+    </div>
+
+    <div class="charts-row-2" style="margin-bottom:20px">
+      <div class="chart-card"><div class="chart-title">⚡ Power Output by Zone (kW)</div><canvas id="adm-zonepower"></canvas></div>
+      <div class="chart-card"><div class="chart-title">🟢 Fleet Panel Status</div><canvas id="adm-fleetstatus"></canvas></div>
+    </div>
+
+    <div class="section-hdr" style="margin-bottom:14px">📋 All Users Summary</div>
+    <div class="admin-overview-grid" id="adminZoneCards"></div>`;
+
+  // Zone power bar
+  const G='#1a4a30';
+  chartInstances.push(new Chart(document.getElementById('adm-zonepower'),{type:'bar',
+    data:{labels:ZONE_NAMES,datasets:[{label:'Power (kW)',data:ZONE_NAMES.map(z=>ALL_ZONES[z].peakPower),
+      backgroundColor:ZONE_NAMES.map(z=>ZONE_COLORS[z]),borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false}},y:{grid:{color:G},min:0}}}}));
+
+  // Fleet doughnut
+  chartInstances.push(new Chart(document.getElementById('adm-fleetstatus'),{type:'doughnut',
+    data:{labels:['Operational','Degraded','Fault'],datasets:[{data:[totOp,totDeg,totFault],
+      backgroundColor:['#34d399','#f59e0b','#ef4444'],borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:true,cutout:'62%',
+      plugins:{legend:{position:'bottom',labels:{padding:14,font:{size:11},color:'#4d7a62'}}}}}));
+
+  // Mini zone cards
+  const cards=document.getElementById('adminZoneCards');
+  cards.innerHTML=ZONE_NAMES.map((z,zi)=>{
+    const ds=ALL_ZONES[z];
+    const col=ZONE_COLORS[z];
+    const uname=USER_NAMES[z];
+    const ulogin=['user1','user2','user3','user4','user5'][zi];
+    return`<div class="user-panel-card">
+      <div class="user-panel-header">
+        <div class="user-panel-name">
+          <span style="color:${col}">●</span> ${uname}
+          <span class="zone-badge" style="background:${col}22;color:${col};border-color:${col}44">${USER_NAMES[z]}</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted)">${ulogin}</div>
+      </div>
+      <div class="mini-stats">
+        <div class="mini-stat ok"><div class="mini-stat-val">${ds.peakPower}</div><div class="mini-stat-lbl">kW</div></div>
+        <div class="mini-stat ok"><div class="mini-stat-val">${ds.operational}</div><div class="mini-stat-lbl">Active</div></div>
+        <div class="mini-stat bad"><div class="mini-stat-val">${ds.faultCount}</div><div class="mini-stat-lbl">Faults</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
+        🌡️ ${ds.avgTemp}°C avg &nbsp;·&nbsp; ☀️ ${ds.irr} W/m² &nbsp;·&nbsp; 🔋 ${ds.energyToday} MWh today
+      </div>
+      <div class="mini-chart-wrap"><canvas id="mini-${z}"></canvas></div>
+    </div>`;
+  }).join('');
+
+  // Mini sparkline charts
+  ZONE_NAMES.forEach(z=>{
+    const ds=ALL_ZONES[z];
+    const col=ZONE_COLORS[z];
+    const hours=Array.from({length:24},(_,i)=>`${i}`);
+    chartInstances.push(new Chart(document.getElementById(`mini-${z}`),{type:'line',
+      data:{labels:hours,datasets:[{data:ds.power24,borderColor:col,backgroundColor:col+'18',
+        fill:true,tension:0.4,pointRadius:0,borderWidth:1.5}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:false,
+        plugins:{legend:{display:false},tooltip:{enabled:false}},
+        scales:{x:{display:false},y:{display:false,min:0}}}}));
+  });
+}
+
+function renderAdminZone(zoneName){
+  const content=document.getElementById('adminTabContent');
+  // Reuse user view HTML but inject into admin tab
+  const tmp=document.createElement('div');
+  document.getElementById('mainContent').appendChild(tmp);
+  const ds=ALL_ZONES[zoneName];
+  const col=ZONE_COLORS[zoneName];
+  const uname=USER_NAMES[zoneName];
+  const G='#1a4a30';
+
+  content.innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <span style="font-size:20px">👤</span>
+      <div>
+        <div style="font-weight:700;font-size:15px">${uname}</div>
+        <div style="font-size:11px;color:var(--muted)">Full zone data — Admin view</div>
+      </div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi-card c-green"><div class="kpi-icon">⚡</div><div class="kpi-label">Power Output</div><div class="kpi-value">${ds.peakPower} kW</div><div class="kpi-sub">${ds.delta>=0?'↑':'↓'} ${Math.abs(ds.delta)}% vs yesterday</div></div>
+      <div class="kpi-card c-teal"><div class="kpi-icon">☀️</div><div class="kpi-label">Solar Irradiance</div><div class="kpi-value">${ds.irr} W/m²</div><div class="kpi-sub">${ds.irr>800?'Clear sky':ds.irr>600?'Partly cloudy':'Overcast'}</div></div>
+      <div class="kpi-card c-dk"><div class="kpi-icon">🔋</div><div class="kpi-label">Energy Today</div><div class="kpi-value">${ds.energyToday} MWh</div><div class="kpi-sub">Target: ${ds.energyTarget} MWh</div></div>
+      <div class="kpi-card c-green"><div class="kpi-icon">✅</div><div class="kpi-label">Operational</div><div class="kpi-value">${ds.operational}/${ds.TOTAL}</div><div class="kpi-sub">${ds.avail}% availability</div></div>
+      <div class="kpi-card c-red"><div class="kpi-icon">⚠️</div><div class="kpi-label">Faults</div><div class="kpi-value">${ds.faultCount}</div><div class="kpi-sub">Drone required</div></div>
+      <div class="kpi-card c-orange"><div class="kpi-icon">🌡️</div><div class="kpi-label">Avg Temp</div><div class="kpi-value">${ds.avgTemp}°C</div><div class="kpi-sub">${ds.overheat} overheating</div></div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-card"><div class="chart-title">📈 Power Output – 24h (kW)</div><canvas id="az-power"></canvas></div>
+      <div class="chart-card"><div class="chart-title">🟢 Panel Status</div><canvas id="az-status"></canvas></div>
+    </div>
+    <div class="charts-row-2">
+      <div class="chart-card"><div class="chart-title">🔋 Weekly Energy (MWh)</div><canvas id="az-energy"></canvas></div>
+      <div class="chart-card"><div class="chart-title">🌡️ Temp Distribution</div><canvas id="az-temp"></canvas></div>
+    </div>
+    <div class="bottom-row">
+      <div class="chart-card">
+        <div class="section-hdr">🗂️ Panel Table</div>
+        <table class="panel-table">
+          <thead><tr><th>Panel ID</th><th>Power (kW)</th><th>Temp (°C)</th><th>Status</th></tr></thead>
+          <tbody>${ds.panels.map(p=>`<tr><td>${p.id}</td><td>${p.power.toFixed(1)}</td><td>${p.temp}</td><td><span class="badge ${p.status}">${p.status==='ok'?'Operational':p.status==='warn'?'Degraded':'Fault'}</span></td></tr>`).join('')}</tbody>
+        </table>
+      </div>
+      <div class="chart-card">
+        <div class="section-hdr">🔔 Alerts</div>
+        <div class="alerts-list">${ds.alerts.map(a=>`<div class="alert-item ${a.type}"><div class="alert-dot"></div><div><div class="alert-title">${a.title}</div><div class="alert-time">${a.time}</div></div></div>`).join('')}</div>
+      </div>
+    </div>`;
+
+  const hours=Array.from({length:24},(_,i)=>`${i}:00`);
+  chartInstances.push(new Chart(document.getElementById('az-power'),{type:'line',
+    data:{labels:hours,datasets:[{label:'kW',data:ds.power24,borderColor:col,backgroundColor:col+'22',fill:true,tension:0.4,pointRadius:0,borderWidth:2.5}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:G},ticks:{maxTicksLimit:8}},y:{grid:{color:G},min:0}}}}));
+  chartInstances.push(new Chart(document.getElementById('az-status'),{type:'doughnut',
+    data:{labels:['Operational','Degraded','Fault'],datasets:[{data:[ds.operational,ds.degraded,ds.faultCount],backgroundColor:['#34d399','#f59e0b','#ef4444'],borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{padding:14,font:{size:11},color:'#4d7a62'}}}}}));
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  chartInstances.push(new Chart(document.getElementById('az-energy'),{type:'bar',
+    data:{labels:days,datasets:[{label:'MWh',data:ds.weeklyEnergy,backgroundColor:days.map((_,i)=>i===new Date().getDay()-1?col:'#059669'),borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:G},min:0}}}}));
+  chartInstances.push(new Chart(document.getElementById('az-temp'),{type:'bar',
+    data:{labels:['<40','40-45','45-50','50-55','55-60','60-65','>65'],datasets:[{label:'Panels',data:ds.tempBuckets,backgroundColor:['#059669','#059669','#2dd4bf','#2dd4bf','#f59e0b','#ef4444','#ef4444'],borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:G},min:0}}}}));
+}
+
+// ══════════════════════════════════════════════════
+//  DRONE SECTION (admin only)
+// ══════════════════════════════════════════════════
+let uploadedFile=null;
+
+function renderDroneSection(){
+  // Collect all faulty panels from all zones
+  const allFaults=[];
+  const allWarns=[];
+  ZONE_NAMES.forEach(z=>{
+    ALL_ZONES[z].panels.filter(p=>p.status==='fault').forEach(p=>allFaults.push({...p,zone:z}));
+    ALL_ZONES[z].panels.filter(p=>p.status==='warn').forEach(p=>allWarns.push({...p,zone:z}));
+  });
+
+  const content=document.getElementById('adminTabContent');
+  content.innerHTML=`
+    <div class="chart-card">
+      <div class="section-hdr">🚁 Drone Image Upload — Fault Inspection (All Zones)</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:18px">
+        As admin, you can upload drone images for any faulty panel across all 5 zones for AI defect analysis.
+      </p>
+      <div class="panel-select-row">
+        <label>Select Panel:</label>
+        <select id="panelSelect">
+          <option value="">-- Choose faulty panel --</option>
+          ${allFaults.map(p=>`<option value="${p.id}|${p.zone}">${p.id} · ${USER_NAMES[p.zone]} – Fault</option>`).join('')}
+          ${allWarns.map(p=>`<option value="${p.id}|${p.zone}">${p.id} · ${USER_NAMES[p.zone]} – Degraded</option>`).join('')}
+        </select>
+        <button class="analyze-btn" id="analyzeBtn" onclick="analyzeImage()" disabled>🔍 Analyze</button>
+      </div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="droneFile" accept="image/*" onchange="handleFileSelect(event)"/>
+        <div class="upload-icon">🚁</div>
+        <h3>Drop drone image here or click to upload</h3>
+        <p>Supports JPG, PNG, WEBP · Max 20MB</p>
+      </div>
+      <div class="preview-area" id="previewArea"></div>
+    </div>`;
+
+  const zone=document.getElementById('uploadZone');
+  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('dragging')});
+  zone.addEventListener('dragleave',()=>zone.classList.remove('dragging'));
+  zone.addEventListener('drop',e=>{
+    e.preventDefault();zone.classList.remove('dragging');
+    const file=e.dataTransfer.files[0];
+    if(file)handleFileSelect({target:{files:[file]}});
+  });
+}
+
+function handleFileSelect(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  uploadedFile=file;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    document.getElementById('previewArea').innerHTML=`
+      <img src="${e.target.result}" class="preview-img" alt="Drone preview"/>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px">
+        📎 ${file.name} · ${(file.size/1024).toFixed(0)} KB — ready to analyze
+      </p>`;
+    document.getElementById('analyzeBtn').disabled=false;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyzeImage(){
+  const sel=document.getElementById('panelSelect').value;
+  if(!sel){alert('Please select a faulty panel first.');return;}
+  if(!uploadedFile){alert('Please upload a drone image first.');return;}
+  const [panelId,zone]=sel.split('|');
+
+  const btn=document.getElementById('analyzeBtn');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>Analyzing...';
+
+  try{
+    // Simulate AI processing delay
+    await new Promise(res=>setTimeout(res,2000));
+
+    // Simulated intelligent defect detection
+    const faultTypes=[
+      "Micro-crack formation",
+      "Hotspot detected",
+      "Delamination",
+      "Heavy soiling accumulation",
+      "Cell discoloration",
+      "Physical surface damage"
+    ];
+
+    const severities=["Critical","High","Medium","Low"];
+    const actions={
+      "Micro-crack formation":"Perform EL testing and replace affected module if crack propagates.",
+      "Hotspot detected":"Check bypass diode and inspect for shading or internal cell damage.",
+      "Delamination":"Seal affected area or replace module to prevent moisture ingress.",
+      "Heavy soiling accumulation":"Schedule immediate cleaning and re-evaluate output.",
+      "Cell discoloration":"Inspect for UV degradation and monitor performance trend.",
+      "Physical surface damage":"Replace panel immediately to avoid further electrical risk."
+    };
+
+    const fault=faultTypes[Math.floor(Math.random()*faultTypes.length)];
+    const severity=severities[Math.floor(Math.random()*severities.length)];
+    const affected=Math.floor(Math.random()*40)+5;
+
+    const result=`
+🔍 FAULT TYPE: ${fault}
+🚨 SEVERITY: ${severity}
+📐 AFFECTED AREA: ${affected}% of panel surface
+🔬 ROOT CAUSE: Likely due to environmental stress, prolonged exposure, or mechanical impact.
+🛠️ RECOMMENDED ACTION: ${actions[fault]}
+📋 ADDITIONAL NOTES: Thermal irregularities observed in ${panelId}. Performance degradation expected if not addressed.
+`;
+
+    const pa=document.getElementById('previewArea');
+    const img=pa.querySelector('img')?.outerHTML||'';
+    const cap=pa.querySelector('p')?.outerHTML||'';
+
+    pa.innerHTML=img+cap+`
+      <div class="ai-result">
+        <div class="ai-label">🤖 AI Defect Analysis — Panel ${panelId} · ${USER_NAMES[zone]}</div>
+        <div style="white-space:pre-wrap;line-height:1.9">${result}</div>
+      </div>`;
+  } catch(err){
+    const pa=document.getElementById('previewArea');
+    const img=pa.querySelector('img')?.outerHTML||'';
+    pa.innerHTML=img+`
+      <div class="ai-result">
+        <div class="ai-label" style="color:var(--danger)">⚠️ Analysis Failed</div>
+        <div>Error occurred during analysis. Please try again.</div>
+      </div>`;
+  }
+
+  btn.disabled=false;
+  btn.innerHTML='🔍 Analyze';
+}
+setInterval(()=>{
+  if(currentUser){
+    loadCSVData().then(data=>{
+      ALL_ZONES = processCSVData(data);
+
+      chartInstances.forEach(c=>c.destroy());
+      chartInstances=[];
+
+      if(currentUser.role==='admin') renderAdmin();
+      else renderUser(currentUser.zone);
+
+      document.getElementById('lastUpdated').textContent =
+        'Updated: ' + new Date().toLocaleTimeString();
+    });
+  }
+},60000);
+
+</script>
+</body>
+</html>
